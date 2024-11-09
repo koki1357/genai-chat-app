@@ -15,6 +15,7 @@ from langchain_community.document_loaders import UnstructuredMarkdownLoader, Tex
 from langchain_core.runnables import RunnablePassthrough
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from dotenv import load_dotenv
+from langchain_openai import ChatOpenAI
 
 from utils.connect_blobDB import connect_blobDB
 from utils.split_pdf import process_pdf_from_blob
@@ -62,30 +63,22 @@ def main():
     'AIに実施させたいタスクを選んでください！',
     (reply_from_email_using_pdfinfo, reply_email, reply_from_picture)
     )
+    openai_api_key = os.environ['OPENAI_API_KEY']
     if task == reply_email:
     # メール返信AIの処理
-        # chain = initialize_chain() # RAGを使う際に利用する
-        llm = AzureChatOpenAI(
-            azure_endpoint= os.environ['AZURE_OPEN_AI_END_POINT'],
-            openai_api_version="2023-03-15-preview",
-            # openai_api_version="2023-12-01-preview",
-            deployment_name= os.environ['AZURE_OPENAI_DEPLOYMENT_NAME'],
-            openai_api_key= os.environ['AZURE_OPEN_AI_API_KEY'],
-            openai_api_type="azure",
-        )
 
+        llm = ChatOpenAI(model="gpt-4", max_tokens=200)
         # ページの設定
         st.header(reply_email+" 🤖")
-        nortification_contents_nouse_webcontents = load_template(Path(__file__).parent.parent / "resources" / "text" / "nortification_contents_nouse_webcontents.txt")
-        custom_notification('warning', nortification_contents_nouse_webcontents)
 
         # チャット履歴の初期化
         if "messages" not in st.session_state:
             st.session_state.messages = []
 
         # テンプレートファイルのパスを設定
-        template_path = Path(__file__).parent.parent / "resources" / "email_template_content.txt"
-        email_template_content = load_template(template_path)
+        # template_path = Path(__file__).parent.parent / "resources" / "email_template_content.txt"
+        # email_template_content = load_template(template_path)
+        email_template_content = ""
         if email_template_content is None:
             return
 
@@ -108,9 +101,6 @@ def main():
                     template=template,
                     )
                 doctor_response_template.format(received_mail=user_input)
-                # print(user_input, type(user_input))
-                # print(doctor_response_template)
-                # print(type(doctor_response_template.format(received_mail=user_input)))
                 response = llm.invoke(doctor_response_template.format(received_mail=user_input))
             st.session_state.messages.append(AIMessage(content=response.content))
     
@@ -127,29 +117,14 @@ def main():
                 st.write(f"System message: {message.content}")
 
     elif task == reply_from_email_using_pdfinfo:
-        keywords_pdf_mapping_csv_file = Path(__file__).parent.parent / "resources" / "csv" / "keywords_pdf_mapping.csv"
-        keyword_mapping = load_keyword_mapping(keywords_pdf_mapping_csv_file)
-        pdfs_keyword_mapping  = {value:key for key, value in keyword_mapping.items()}
-
-        container_client = connect_blobDB(
-            connection_string=os.environ['AZURE_BLOB_CONNECTION_STRING'],
-            container_name=os.environ['AZURE_BLOB_CONTAINER_NAME']
-        )
-            
+        # keywords_pdf_mapping_csv_file = Path(__file__).parent.parent / "resources" / "csv" / "keywords_pdf_mapping.csv"
+        # keyword_mapping = load_keyword_mapping(keywords_pdf_mapping_csv_file)
+        # pdfs_keyword_mapping  = {value:key for key, value in keyword_mapping.items()}
+        
         # メール返信AIの処理
-        # chain = initialize_chain() # RAGを使う際に利用する
-        llm = AzureChatOpenAI(
-            azure_endpoint= os.environ['AZURE_OPEN_AI_END_POINT_CHAT'],
-            openai_api_version="2023-03-15-preview",
-            # openai_api_version="2023-12-01-preview",
-            deployment_name= os.environ['AZURE_OPENAI_DEPLOYMENT_NAME_CHAT'],
-            openai_api_key= os.environ['AZURE_OPEN_AI_API_KEY_CHAT'],
-            openai_api_type="azure",
-        )
+        llm = ChatOpenAI(model="gpt-4", max_tokens=200)
         # ページの設定
         st.header(reply_from_email_using_pdfinfo+" 🤖")
-        nortification_contents_use_webcontents = load_template(Path(__file__).parent.parent / "resources" / "text" / "nortification_contents_use_webcontents.txt")
-        custom_notification('success', nortification_contents_use_webcontents)
 
         # チャット履歴の初期化
         # 人 or AIのメッセージ
@@ -165,11 +140,13 @@ def main():
             st.session_state.copied = []
 
         # テンプレートファイルのパスを設定
-        template_path = Path(__file__).parent.parent / "resources" / "email_template_content.txt"
-        email_template_content = load_template(template_path)
+        # template_path = Path(__file__).parent.parent / "resources" / "email_template_content.txt"
+        # email_template_content = load_template(template_path)
+        email_template_content = ""
+
         if email_template_content is None:
             return
-                
+        
         # プロンプトテンプレートを格納
         template = f"""
         ## 事前情報
@@ -185,10 +162,12 @@ def main():
         if user_input := st.chat_input("メールの内容を入力してください。"):
             st.session_state.messages.append(HumanMessage(content=user_input))
             
-            if container_client:
-                pdf_blob_name = find_matching_files(user_input, keyword_mapping)[0] #一つのファイルに限定
-                documents = process_pdf_from_blob(container_client, pdf_blob_name)
-                pdf_info = "".join(documents) if documents else "事前情報なし"
+            # if container_client:
+            #     pdf_blob_name = find_matching_files(user_input, keyword_mapping)[0] #一つのファイルに限定
+            #     documents = process_pdf_from_blob(container_client, pdf_blob_name)
+                # pdf_info = "".join(documents) if documents else "事前情報なし"
+            pdf_blob_name = ""
+            pdf_info = ""
 
             with st.spinner("GPTが返信を生成しています..."):
                 doctor_response_template = PromptTemplate(
@@ -196,9 +175,6 @@ def main():
                     template=template,
                     )
                 doctor_response_template.format(received_mail=user_input, pdf_info=pdf_info)
-                # print(user_input, type(user_input))
-                # print(doctor_response_template)
-                # print(type(doctor_response_template.format(received_mail=user_input)))
                 response = llm.invoke(doctor_response_template.format(received_mail=user_input, pdf_info=pdf_info))
                 # st.session_state.copied.append(response.content)
 
@@ -214,25 +190,17 @@ def main():
         messages = st.session_state.get('messages', [])
         search_documents = st.session_state.get('search_document', [])
         copied = st.session_state.get("copied", [])
-        # for message in messages:
         for i in range(len(messages)):
-            # if isinstance(message, AIMessage):
             if isinstance(messages[i], AIMessage):
                 with st.chat_message('assistant'):
-                    # st.markdown(message.content)
                     st.markdown(messages[i].content)
                     chat_message_with_copy(messages[i].content)
-                # st.button("📋", on_click=on_copy_click, args=(messages[i].content,))
-                # st.code(messages[i].conte)nt)
                 with st.chat_message('assistant'):                        
                     st.markdown(search_documents[i//2].content)
-            # elif isinstance(message, HumanMessage):
             elif isinstance(messages[i], HumanMessage):
                 with st.chat_message('user'):
-                    # st.markdown(message.content)
                     st.markdown(messages[i].content)
             else:
-                # st.write(f"System message: {message.content}")
                 st.write(f"System message: {messages[i].content}")
     
     elif task == reply_from_picture:
@@ -243,15 +211,12 @@ def main():
         {image_base64}
         """
 
+        # チャット履歴の初期化
+        if "messages" not in st.session_state:
+            st.session_state.messages = []
 
         if uploaded_image := st.file_uploader('画像をアップロードして下さい。(拡張子: png, jpg, jpeg)', type=['png', 'jpg', 'jpeg']):
             pass
-            # uploaded_image_base64 = str(base64.b64encode(uploaded_image).decode('utf-8'))
-            
-        #     image_responce_template = ChatPrompmtTemplate.from_messages([
-        #         SystemMessages(c)
-
-        #     ])
         
         # ユーザーの入力を監視
         if user_input := st.chat_input("【※現在作成中】アップロード画像に関連したチャット機能は現在作成中です"):
@@ -262,9 +227,6 @@ def main():
                     template=template,
                     )
                 doctor_response_template.format(received_mail=user_input)
-                # print(user_input, type(user_input))
-                # print(doctor_response_template)
-                # print(type(doctor_response_template.format(received_mail=user_input)))
                 response = llm.invoke(doctor_response_template.format(received_mail=user_input))
             st.session_state.messages.append(AIMessage(content=response.content))
     
@@ -282,5 +244,4 @@ def main():
 
 
 if __name__ == '__main__':
-    # print("hello")
     main()
