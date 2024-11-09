@@ -10,7 +10,6 @@ from langchain.schema import (HumanMessage, AIMessage)
 # from langchain.chains import LLMChain
 # from langchain import PromptTemplate, ChatPrompmtTemplate
 from langchain import PromptTemplate
-from langchain_chroma import Chroma
 from langchain_community.embeddings.huggingface import HuggingFaceEmbeddings
 from langchain_community.document_loaders import UnstructuredMarkdownLoader, TextLoader
 from langchain_core.runnables import RunnablePassthrough
