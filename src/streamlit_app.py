@@ -15,7 +15,6 @@ from langchain_community.document_loaders import UnstructuredMarkdownLoader, Tex
 from langchain_core.runnables import RunnablePassthrough
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from dotenv import load_dotenv
-from streamlit_option_menu import option_menu
 
 from utils.connect_blobDB import connect_blobDB
 from utils.split_pdf import process_pdf_from_blob
