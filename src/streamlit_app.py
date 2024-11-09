@@ -67,7 +67,7 @@ def main():
     if task == reply_email:
     # メール返信AIの処理
 
-        llm = ChatOpenAI(model="gpt-4", max_tokens=200)
+        llm = ChatOpenAI(model="gpt-4", max_tokens=500)
         # ページの設定
         st.header(reply_email+" 🤖")
 
